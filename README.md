@@ -1,0 +1,1 @@
+<p>Checks all links on a webpage for malicious activity/threats. Highlights it.</p> 
