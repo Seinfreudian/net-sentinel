@@ -15,6 +15,9 @@
         padding: 8px 10px;
         border-radius: 5px;
         cursor: pointer;
+        margin-top: 5px;
+        display: block;
+        width: 100%;
       }
       #status {
         margin-top: 10px;
@@ -24,7 +27,8 @@
   </head>
   <body>
     <h3>🔍 Advanced Link Scan</h3>
-    <button id="scanBtn">Scan this page</button>
+    <button id="scanBtn">Start Scan</button>
+    <button id="pauseBtn" style="background:#E67E22; display:none;">Pause Scan</button>
     <p id="status"></p>
     <script src="popup.js"></script>
   </body>

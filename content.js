@@ -3,29 +3,74 @@ const BAD_KEYWORDS = ["phish", "malware", "ransom", "hack", "scam", "steal", "lo
 const BAD_TLDS = ["ru", "cn", "tk", "ml", "ga", "cf", "gq", "xyz", "top", "pw", "work", "fit", "biz"];
 const ENTROPY_THRESHOLD = 4.0;
 
-window.addEventListener("message", (event) => {
-  if (event.data.type !== "ADVANCED_SCAN") return;
+let paused = false;
+let scanning = false;
+let scanIndex = 0;
+let elements = [];
+let report = [];
 
-  const elements = [...document.querySelectorAll("a, img")];
-  const report = [];
+window.addEventListener("message", async (event) => {
+  const { type, paused: pauseState } = event.data;
 
-  for (const el of elements) {
-    const url = el.tagName === "A" ? el.href : el.src;
-    if (!url) continue;
-
-    const findings = analyzeURL(el, url);
-    if (findings.length > 0) {
-      el.style.border = "3px solid red";
-      el.title = `⚠️ Suspicious:\n${findings.join("\n")}`;
-      report.push({ url, findings });
-    } else {
-      el.style.border = "2px solid green";
-      el.title = "✅ Clean";
-    }
+  if (type === "ADVANCED_SCAN_START" || type === "ADVANCED_SCAN_RESTART") {
+    if (scanning) return;
+    scanning = true;
+    paused = false;
+    report = [];
+    elements = [...document.querySelectorAll("a, img")];
+    scanIndex = 0;
+    await runScan();
   }
 
-  showOverlay(report);
+  if (type === "ADVANCED_SCAN_PAUSE") {
+    paused = pauseState;
+  }
 });
+
+async function runScan() {
+  while (scanIndex < elements.length) {
+    if (paused) {
+      await waitForUnpause();
+    }
+
+    const el = elements[scanIndex];
+    const url = el.tagName === "A" ? el.href : el.src;
+    if (url) {
+      const findings = analyzeURL(el, url);
+      if (findings.length > 0) {
+        el.style.border = "3px solid red";
+        el.title = `⚠️ Suspicious:\n${findings.join("\n")}`;
+        report.push({ url, findings });
+      } else {
+        el.style.border = "2px solid green";
+        el.title = "✅ Clean";
+      }
+    }
+
+    scanIndex++;
+    await sleep(150); // Prevent UI freeze
+  }
+
+  scanning = false;
+  showOverlay(report);
+}
+
+// Wait until resume
+function waitForUnpause() {
+  return new Promise((resolve) => {
+    const check = setInterval(() => {
+      if (!paused) {
+        clearInterval(check);
+        resolve();
+      }
+    }, 300);
+  });
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 
 function analyzeURL(el, url) {
   const issues = [];
